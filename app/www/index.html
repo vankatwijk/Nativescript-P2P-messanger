@@ -4,7 +4,7 @@
     </head>
     <body>
         <script src="lib/nativescript-webview-interface.js"></script>
-        <script src="peerjs.js"></script>
+        <script src="peerjs.min.js"></script>
         <script type="text/javascript">
             (function () {
 
@@ -44,6 +44,11 @@
                     // do any processing
                     console.log('connect to peer : '+args1);
                     join(args1);
+                }
+                window.waitforpeer = function(args1){
+                    // do any processing
+                    console.log('waiting for peers to connect : '+args1);
+                    ready();
                 }
 
                  function initialize() {
@@ -155,7 +160,7 @@
                 function ready() {
                     conn.on('data', function (data) {
                         console.log("Data recieved");
-                        oWebViewInterface.emit('recieveData', data);
+                        oWebViewInterface.emit('recieveDataReady', data);
 
                     });
                     conn.on('close', function () {

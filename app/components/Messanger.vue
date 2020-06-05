@@ -7,7 +7,9 @@
             <ActionItem @tap="connectToPeerPrompt" ios.systemIcon="16"
                 ios.position="right" text="connect to user" android.position="popup">
             </ActionItem>
-            <ActivityIndicator :busy="isBusy"></ActivityIndicator>
+            <ActionItem @tap="waitforpeer" ios.systemIcon="16"
+                ios.position="right" text="wait for connection" android.position="popup">
+            </ActionItem>
         </ActionBar>
 
         <DockLayout width="100%" height="100%" backgroundColor="lightgray"
@@ -84,11 +86,12 @@ export default {
 
         this.oWebViewInterface.on('peerID', (eventData) =>{
             // perform action on event
-            console.log('we got an idddddddddddddddddddddddddd!!!!!!!');
+            console.log('we got an id!!!!!!!!!!!!!!!!');
             alert(eventData);
             this.peerid = eventData;
             this.currentUser = eventData;
             this.isBusy = false;
+            this.chat('id : '+eventData,'system');
         });
         this.oWebViewInterface.on('destroyed', (eventData) =>{
             // perform action on event
@@ -96,20 +99,27 @@ export default {
             this.peerid = eventData;
             this.isBusy = true;
             this.getconnectionID();
+            this.chat('connection lost : retrying....','system');
 
         });
         this.oWebViewInterface.on('recieveData', (eventData) =>{
             // perform action on event
             console.log('recieving data!!!!!!!!!!!!!!!!!!');
-            this.chat(eventData,'other')
+            this.chat(eventData,'other');
+        });
+        this.oWebViewInterface.on('recieveDataReady', (eventData) =>{
+            // perform action on event
+            console.log('recieving data ready!!!!!!!!!!!!!!!!!!');
+            this.chat(eventData,'other');
         });
         this.oWebViewInterface.on('error', (eventData) =>{
             // perform action on event
             console.log('error !!!!!!!!!!!!!!!!!!');
+            this.chat('error','system');
             this.isBusy = true;
-            setTimeout(() => { 
-                this.getconnectionID();
-            }, 30000);
+            // setTimeout(() => { 
+            //     this.getconnectionID();
+            // }, 30000);
         });
         
 
@@ -119,18 +129,16 @@ export default {
         dialogs.prompt("Connect to another user :", "").then((r) => {
             console.log("Dialog result: " + r.result + ", text: " + r.text);
             this.otherUser = r.text;
-            this.connectToPeer();
+            this.oWebViewInterface.callJSFunction('connectToPeer', this.otherUser, function(result){
+                alert(result);
+            });
         });
 
     },
-
-    connectToPeer(){
-        console.log('conecting to peerrrrrrr!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-
-        this.oWebViewInterface.callJSFunction('connectToPeer', this.otherUser, function(result){
-            alert(result);
-        });
-
+    waitforpeer(){
+            this.oWebViewInterface.callJSFunction('waitforpeer', 'connect', function(result){
+                alert(result);
+            });
     },
     setupWebViewInterface() {
       var webView = this.$refs.webView.nativeView;
@@ -169,7 +177,9 @@ export default {
     filter(sender) {
         if (sender == this.currentUser) {
             return "me";
-        } else {
+        } else if(sender == 'system'){
+            return "system";
+        }else {
             return "them";
         }
     },
@@ -210,7 +220,19 @@ export default {
     ListView {
         separator-color: white;
     }
+    .system {
+        font-size: 14;
+        padding: 5;
+    }
 
+    .system .msg_text {
+        background-color: gray;
+        color: red;
+        padding: 8;
+        margin-right: 10;
+        margin-left: 10;
+        border-radius: 5;
+    }
     .msg {
         font-size: 14;
         padding: 5;

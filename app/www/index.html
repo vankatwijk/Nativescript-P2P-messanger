@@ -1,0 +1,115 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+    integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+  <title>Document</title>
+</head>
+
+<body>
+  <div class="container">
+
+    <div class="card mt-4">
+      <h5 class="card-header">WebRTC Call App</h5>
+      <div class="card-body">
+        <div class="text-center"><audio controls></audio></div>
+
+        <div class="row">
+          <div class="col mt-4">
+
+            <input type="button" class="btn btn-success" onclick="answer()" value="Generate peer ID">
+          </div>
+
+          <div class="col mt-4">
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" id="peeridd" placeholder="Enter Peer ID">
+              <br/>
+              <div class="input-group-append">
+                <button class="btn btn-outline-secondary" type="button" onclick="call()">Call</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- PeerID -->
+        <div class="text-left">
+          <h2><span class="badge badge-warning" id="peerid"></span></h2>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <style>.heart{color:#e25555;}</style>
+Made with <span class="heart">❤</span> by <a href="https://www.facebook.com/AbdelhadiBour/">Hendrikus</a>
+      </div>
+  <script>
+    var getUserMedia = (function () {
+      if (navigator.getUserMedia) {
+        return navigator.getUserMedia.bind(navigator)
+      }
+      if (navigator.webkitGetUserMedia) {
+        return navigator.webkitGetUserMedia.bind(navigator)
+      }
+      if (navigator.mozGetUserMedia) {
+        return navigator.mozGetUserMedia.bind(navigator)
+      }
+    })();
+
+    function onReceiveStream(stream) {
+      var audio = document.querySelector('audio');
+      console.log(audio)
+      audio.srcObject = stream;
+      audio.onloadedmetadata = function (e) {
+        console.log('audio is playing');
+        audio.play();
+      }
+    }
+
+    function answer() {
+      var peer = new Peer();
+      peer.on('call', function (call) {
+        getUserMedia({ video: false, audio: true }, function (stream) {
+          call.answer(stream); // Answer the call with an A/V stream.
+          call.on('stream', function (remoteStream) {
+            onReceiveStream(remoteStream);
+          });
+        }, function (err) {
+          console.log('Failed to get local stream', err);
+        });
+      });
+      peer.on('open', function () {
+        var id = peer.id;
+        document.getElementById('peerid').innerHTML = id
+        console.log(id);
+      });
+    }
+
+
+    function call() {
+      var peer = new Peer();
+      var peerid = document.getElementById('peeridd').value;
+      getUserMedia({ video: false, audio: true }, function (stream) {
+        var call = peer.call(peerid, stream);
+        call.on('stream', function (remoteStream) {
+          onReceiveStream(remoteStream);
+        });
+      }, function (err) {
+        console.log('Failed to get local stream', err);
+      });
+    }
+  </script>
+
+  <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+    integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+    integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+    crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+    integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+    crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/peerjs@1.0.0/dist/peerjs.min.js"></script>
+</body>
+
+</html>

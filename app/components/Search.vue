@@ -1,16 +1,17 @@
 <template lang="html">
     <Page >
         <ActionBar :title="currentUser">
-            <ActionItem @tap="functionCalledByNative" ios.systemIcon="16" ios.position="right"
-                text="WebRTC" android.position="popup">
+            <ActionItem @tap="getconnectionID" ios.systemIcon="16" ios.position="right" height="10vh"
+                text="connect" android.position="popup">
             </ActionItem>
-            <ActionItem @tap="functionCalledByNative" ios.systemIcon="16"
-                ios.position="right" text="Login" android.position="popup">
+            <ActionItem @tap="connectToPeerPrompt" ios.systemIcon="16"
+                ios.position="right" text="connect to user" android.position="popup">
             </ActionItem>
+            <ActivityIndicator :busy="isBusy"></ActivityIndicator>
         </ActionBar>
+
         <DockLayout width="100%" height="100%" backgroundColor="lightgray"
             stretchLastChild="false">
-
             <GridLayout columns="*,auto" style="padding: 10"
                 class="bottom-tabs" height="71" orientation="horizontal"
                 dock="bottom">
@@ -24,7 +25,7 @@
 
 
             <RadListView dock="top" height="100%" width="100%" ref="messageList"
-                padding="5" for="chat in chats" class="list" style="background:red;">
+                padding="5" for="chat in chats" class="list" style="background:black;">
                 <v-template>
                     <GridLayout columns="*" rows="auto" class="msg">
 
@@ -50,6 +51,7 @@ import { WebView } from 'tns-core-modules/ui/web-view'
 let webViewInterfaceModule = require('nativescript-webview-interface');
 import * as fs from "tns-core-modules/file-system";
 import * as Permissions from "nativescript-permissions";
+var dialogs = require("tns-core-modules/ui/dialogs");
 
 export default {
   data() {
@@ -57,29 +59,11 @@ export default {
       oWebViewInterface: null,
       url:'',
       peerid:'',
-      currentUser: "hendrikus",
+      currentUser: "",
       message: '',
-      chats: [{
-            message: "Australia",
-            from: "hendrikus"
-        },
-        {
-            message: "Belgium",
-            from: "hendrikus"
-        },
-        {
-            message: "Bulgaria",
-            from: "pieter"
-        },
-        {
-            message: "Canada",
-            from: "hendrikus"
-        },
-        {
-            message: "Switzerland",
-            from: "pieter"
-        }
-        ],
+      chats: [],
+      isBusy:false,
+      otherUser:''
     }
   },
   mounted(){
@@ -96,7 +80,7 @@ export default {
         console.log(fs.knownFolders.currentApp().path);
         //this.setupWebViewInterface();
         var webView = this.$refs.webView.nativeView;
-        this.oWebViewInterface = new webViewInterfaceModule.WebViewInterface(webView,fs.knownFolders.currentApp().path+'/www/receive.html');
+        this.oWebViewInterface = new webViewInterfaceModule.WebViewInterface(webView,fs.knownFolders.currentApp().path+'/www/index.html');
 
         this.oWebViewInterface.on('peerID', (eventData) =>{
             // perform action on event
@@ -104,26 +88,56 @@ export default {
             alert(eventData);
             this.peerid = eventData;
             this.currentUser = eventData;
+            this.isBusy = false;
         });
         this.oWebViewInterface.on('destroyed', (eventData) =>{
             // perform action on event
             console.log('destroyed!!!!!!!!!!!!!!!!!!!!!!!!');
             this.peerid = eventData;
+            this.isBusy = true;
+            this.getconnectionID();
+
         });
         this.oWebViewInterface.on('recieveData', (eventData) =>{
             // perform action on event
             console.log('recieving data!!!!!!!!!!!!!!!!!!');
             this.chat(eventData,'other')
         });
+        this.oWebViewInterface.on('error', (eventData) =>{
+            // perform action on event
+            console.log('error !!!!!!!!!!!!!!!!!!');
+            this.isBusy = true;
+            setTimeout(() => { 
+                this.getconnectionID();
+            }, 30000);
+        });
         
+
+    },
+    connectToPeerPrompt(){
+
+        dialogs.prompt("Connect to another user :", "").then((r) => {
+            console.log("Dialog result: " + r.result + ", text: " + r.text);
+            this.otherUser = r.text;
+            this.connectToPeer();
+        });
+
+    },
+
+    connectToPeer(){
+        console.log('conecting to peerrrrrrr!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+
+        this.oWebViewInterface.callJSFunction('connectToPeer', this.otherUser, function(result){
+            alert(result);
+        });
 
     },
     setupWebViewInterface() {
       var webView = this.$refs.webView.nativeView;
       this.oWebViewInterface = new webViewInterfaceModule.WebViewInterface(webView,'../www/index.html');
     },
-    functionCalledByNative(){
-
+    getconnectionID(){
+      this.isBusy = true;
       console.log('---------------------------------');
       this.oWebViewInterface.callJSFunction('functionCalledByNative', ['gg'], function(result){
         alert(result);

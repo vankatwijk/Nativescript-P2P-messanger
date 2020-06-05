@@ -1,115 +1,171 @@
-
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
-    integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
-  <title>Document</title>
-</head>
+<html>
+    <head>
+    </head>
+    <body>
+        <script src="lib/nativescript-webview-interface.js"></script>
+        <script src="peerjs.js"></script>
+        <script type="text/javascript">
+            (function () {
 
-<body>
-  <div class="container">
+                var lastPeerId = null;
+                var peer = null; // Own peer object
+                var peerId = null;
+                var conn = null;
+                var oWebViewInterface = window.nsWebViewInterface;
+                /**
+                 * Create the Peer object for our end of the connection.
+                 *
+                 * Sets up callbacks that handle any events related to our
+                 * peer object.
+                 */
+                // register listener for any event from native app
+                oWebViewInterface.on('anyEvent', function(eventData){
+                    
+                });
+                 window.functionCalledByNative = function(args1){
+                    // do any processing
+                    console.log('in webview'+args1);
+                    initialize();
+                    return 'were in the app'+args1;
+                }
+                window.sendmessagefromnative = function(args1){
+                    // do any processing
+                    console.log('message added'+args1);
+                    if (conn && conn.open) {
+                        var msg = args1;
+                        conn.send(args1);
+                        console.log("Sent: " + msg)
+                    } else {
+                        console.log('Connection is closed');
+                    }
+                }
+                window.connectToPeer = function(args1){
+                    // do any processing
+                    console.log('connect to peer : '+args1);
+                    join(args1);
+                }
 
-    <div class="card mt-4">
-      <h5 class="card-header">WebRTC Call App</h5>
-      <div class="card-body">
-        <div class="text-center"><audio controls></audio></div>
+                 function initialize() {
+                    // Create own peer object with connection to shared PeerJS server
+                    peer = new Peer(null, {
+                        debug: 2
+                    });
 
-        <div class="row">
-          <div class="col mt-4">
+                    peer.on('open', function (id) {
+                        // Workaround for peer.reconnect deleting previous id
+                        if (peer.id === null) {
+                            console.log('Received null id from peer open');
+                            peer.id = lastPeerId;
+                        } else {
+                            lastPeerId = peer.id;
+                        }
+                        console.log('ID: ' + peer.id);
+                        oWebViewInterface.emit('peerID', peer.id);
+                    });
+                    peer.on('connection', function (c) {
+                        // Allow only a single connection
+                        if (conn && conn.open) {
+                            c.on('open', function() {
+                                c.send("Already connected to another client");
+                                setTimeout(function() { c.close(); }, 500);
+                            });
+                            return;
+                        }
 
-            <input type="button" class="btn btn-success" onclick="answer()" value="Generate peer ID">
-          </div>
+                        conn = c;
+                        console.log("Connected to: " + conn.peer);
+                        //ready();
+                    });
+                    peer.on('disconnected', function () {
+                        console.log('Connection lost. Please reconnect');
 
-          <div class="col mt-4">
-            <div class="input-group mb-3">
-              <input type="text" class="form-control" id="peeridd" placeholder="Enter Peer ID">
-              <br/>
-              <div class="input-group-append">
-                <button class="btn btn-outline-secondary" type="button" onclick="call()">Call</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- PeerID -->
-        <div class="text-left">
-          <h2><span class="badge badge-warning" id="peerid"></span></h2>
-        </div>
-      </div>
+                        // Workaround for peer.reconnect deleting previous id
+                        peer.id = lastPeerId;
+                        peer._lastServerId = lastPeerId;
+                        peer.reconnect();
+                    });
+                    peer.on('close', function() {
+                        conn = null;
+                        console.log('Connection destroyed');
+                        oWebViewInterface.emit('destroyed', peer.id);
+                    });
+                    peer.on('error', function (err) {
+                        console.log(err);
+                        oWebViewInterface.emit('error', err);
+                    });
+                };
+                /**
+                 * Create the connection between the two Peers.
+                 *
+                 * Sets up callbacks that handle any events related to the
+                 * connection and data received on it.
+                 */
+                 function join(args1) {
+                    // Close old connection
+                    if (conn) {
+                        conn.close();
+                    }
+                    console.log('we are joing !!!!!!!!!!!!!!!!!!!!!!!');
+                    console.log(args1);
 
-      <div class="text-center">
-        <style>.heart{color:#e25555;}</style>
-Made with <span class="heart">❤</span> by <a href="https://www.facebook.com/AbdelhadiBour/">Hendrikus</a>
-      </div>
-  <script>
-    var getUserMedia = (function () {
-      if (navigator.getUserMedia) {
-        return navigator.getUserMedia.bind(navigator)
-      }
-      if (navigator.webkitGetUserMedia) {
-        return navigator.webkitGetUserMedia.bind(navigator)
-      }
-      if (navigator.mozGetUserMedia) {
-        return navigator.mozGetUserMedia.bind(navigator)
-      }
-    })();
+                    // Create connection to destination peer specified in the input field
+                    conn = peer.connect(args1, {
+                        reliable: true
+                    });
 
-    function onReceiveStream(stream) {
-      var audio = document.querySelector('audio');
-      console.log(audio)
-      audio.srcObject = stream;
-      audio.onloadedmetadata = function (e) {
-        console.log('audio is playing');
-        audio.play();
-      }
-    }
+                    conn.on('open', function () {
+                        console.log("Connected to: " + conn.peer);
 
-    function answer() {
-      var peer = new Peer();
-      peer.on('call', function (call) {
-        getUserMedia({ video: false, audio: true }, function (stream) {
-          call.answer(stream); // Answer the call with an A/V stream.
-          call.on('stream', function (remoteStream) {
-            onReceiveStream(remoteStream);
-          });
-        }, function (err) {
-          console.log('Failed to get local stream', err);
-        });
-      });
-      peer.on('open', function () {
-        var id = peer.id;
-        document.getElementById('peerid').innerHTML = id
-        console.log(id);
-      });
-    }
+                        // Check URL params for comamnds that should be sent immediately
+                        var command = getUrlParam("command");
+                        if (command)
+                            conn.send(command);
+                    });
+                    // Handle incoming data (messages only since this is the signal sender)
+                    conn.on('data', function (data) {
+                        oWebViewInterface.emit('recieveData', data);
+                    });
+                    conn.on('close', function () {
+                    });
+                };
+
+                /**
+                 * Get first "GET style" parameter from href.
+                 * This enables delivering an initial command upon page load.
+                 *
+                 * Would have been easier to use location.hash.
+                 */
+                function getUrlParam(name) {
+                    name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+                    var regexS = "[\\?&]" + name + "=([^&#]*)";
+                    var regex = new RegExp(regexS);
+                    var results = regex.exec(window.location.href);
+                    if (results == null)
+                        return null;
+                    else
+                        return results[1];
+                };
 
 
-    function call() {
-      var peer = new Peer();
-      var peerid = document.getElementById('peeridd').value;
-      getUserMedia({ video: false, audio: true }, function (stream) {
-        var call = peer.call(peerid, stream);
-        call.on('stream', function (remoteStream) {
-          onReceiveStream(remoteStream);
-        });
-      }, function (err) {
-        console.log('Failed to get local stream', err);
-      });
-    }
-  </script>
+                /**
+                 * Triggered once a connection has been achieved.
+                 * Defines callbacks to handle incoming data and connection events.
+                 */
+                function ready() {
+                    conn.on('data', function (data) {
+                        console.log("Data recieved");
+                        oWebViewInterface.emit('recieveData', data);
 
-  <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
-    integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
-    crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
-    integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
-    crossorigin="anonymous"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
-    integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
-    crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/peerjs@1.0.0/dist/peerjs.min.js"></script>
-</body>
+                    });
+                    conn.on('close', function () {
+                        conn = null;
+                    });
+                }
 
+
+                //initialize();
+            })();
+        </script>
+    </body>
 </html>

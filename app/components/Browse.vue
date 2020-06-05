@@ -1,8 +1,7 @@
 <template lang="html">
     <Page >
-    <label text='click' @tap='onLoad' height='100px;'/>
         <GridLayout>
-            <WebView ref="webView" row="0" col="0" 
+            <WebView ref="webView" row="1" col="0" 
             :src="url" @loadFinished="onLoad" />
         </GridLayout>
 

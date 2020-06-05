@@ -35,7 +35,7 @@
                 <td class="display-box hidden" id="off"><h2>All Off</h2></td>
             </tr>
         </table>
-
+        <script src="lib/nativescript-webview-interface.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/peerjs@1.2.0/dist/peerjs.min.js"></script>
         <script type="text/javascript">
             (function () {
@@ -54,13 +54,34 @@
                 var sendMessageBox = document.getElementById("sendMessageBox");
                 var sendButton = document.getElementById("sendButton");
                 var clearMsgsButton = document.getElementById("clearMsgsButton");
-
+                var oWebViewInterface = window.nsWebViewInterface;
                 /**
                  * Create the Peer object for our end of the connection.
                  *
                  * Sets up callbacks that handle any events related to our
                  * peer object.
                  */
+                // register listener for any event from native app
+                oWebViewInterface.on('anyEvent', function(eventData){
+                    
+                });
+                 window.functionCalledByNative = function(args1){
+                    // do any processing
+                    console.log('in webview'+args1);
+                    initialize();
+                    return 'were in the app'+args1;
+                }
+                window.sendmessagefromnative = function(args1){
+                    // do any processing
+                    console.log('message added'+args1);
+                    if (conn && conn.open) {
+                        var msg = args1;
+                        conn.send(args1);
+                        console.log("Sent: " + msg)
+                    } else {
+                        console.log('Connection is closed');
+                    }
+                }
                  function initialize() {
                     // Create own peer object with connection to shared PeerJS server
                     peer = new Peer(null, {
@@ -79,6 +100,7 @@
                         console.log('ID: ' + peer.id);
                         recvId.innerHTML = "ID: " + peer.id;
                         status.innerHTML = "Awaiting connection...";
+                        oWebViewInterface.emit('peerID', peer.id);
                     });
                     peer.on('connection', function (c) {
                         // Allow only a single connection
@@ -108,6 +130,7 @@
                         conn = null;
                         status.innerHTML = "Connection destroyed. Please refresh";
                         console.log('Connection destroyed');
+                        oWebViewInterface.emit('destroyed', peer.id);
                     });
                     peer.on('error', function (err) {
                         console.log(err);
@@ -122,6 +145,8 @@
                 function ready() {
                     conn.on('data', function (data) {
                         console.log("Data recieved");
+
+                        oWebViewInterface.emit('recieveData', data);
                         var cueString = "<span class=\"cueMsg\">Cue: </span>";
                         switch (data) {
                             case 'Go':
@@ -231,7 +256,7 @@
                 // Clear messages box
                 clearMsgsButton.addEventListener('click', clearMessages);
 
-                initialize();
+                //initialize();
             })();
         </script>
     </body>

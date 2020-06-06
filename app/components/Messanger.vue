@@ -10,6 +10,9 @@
             <ActionItem @tap="waitforpeer" ios.systemIcon="16"
                 ios.position="right" text="wait for connection" android.position="popup">
             </ActionItem>
+            <ActionItem @tap="about" ios.systemIcon="16"
+                ios.position="right" text="About" android.position="popup">
+            </ActionItem>
         </ActionBar>
 
         <DockLayout width="100%" height="100%" backgroundColor="lightgray"
@@ -112,6 +115,11 @@ export default {
             console.log('recieving data ready!!!!!!!!!!!!!!!!!!');
             this.chat(eventData,'other');
         });
+        this.oWebViewInterface.on('ConnectedTo', (eventData) =>{
+            // perform action on event
+            console.log('connected to!!!!!!!!!!!!!!!!!!');
+            this.chat(eventData,'other');
+        });
         this.oWebViewInterface.on('error', (eventData) =>{
             // perform action on event
             console.log('error !!!!!!!!!!!!!!!!!!');
@@ -129,6 +137,7 @@ export default {
         dialogs.prompt("Connect to another user :", "").then((r) => {
             console.log("Dialog result: " + r.result + ", text: " + r.text);
             this.otherUser = r.text;
+            this.chat('connecting to user.......','system');
             this.oWebViewInterface.callJSFunction('connectToPeer', this.otherUser, function(result){
                 alert(result);
             });
@@ -136,6 +145,7 @@ export default {
 
     },
     waitforpeer(){
+            this.chat('standby','system');
             this.oWebViewInterface.callJSFunction('waitforpeer', 'connect', function(result){
                 alert(result);
             });
@@ -146,10 +156,15 @@ export default {
     },
     getconnectionID(){
       this.isBusy = true;
-      console.log('---------------------------------');
+      this.chat('connecting.......','system');
       this.oWebViewInterface.callJSFunction('functionCalledByNative', ['gg'], function(result){
         alert(result);
       });
+    },
+    about(){
+
+      this.chat('Created by Hendrikus van katwijk','system');
+      this.chat('peer to peer messaging app. v0.0.1','system');
     },
     alert(msg) {
         alert(msg);
@@ -226,7 +241,7 @@ export default {
     }
 
     .system .msg_text {
-        background-color: gray;
+        background-color: black;
         color: red;
         padding: 8;
         margin-right: 10;

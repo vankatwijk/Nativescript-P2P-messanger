@@ -80,6 +80,8 @@
 
                         conn = c;
                         console.log("Connected to: " + conn.peer);
+
+                        oWebViewInterface.emit('ConnectedTo', 'connected to : '+conn.peer);
                         //ready();
                     });
                     peer.on('disconnected', function () {
